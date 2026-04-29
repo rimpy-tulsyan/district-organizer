@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>District Organizer — Self-serve event publisher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#CB202D;
+    --red-2:#E23744;
+    --red-soft:#FDECEE;
+    --ink:#1A1A1A;
+    --ink-2:#2D2D2D;
+    --grey:#6B6B6B;
+    --grey-2:#9B9B9B;
+    --line:#EAEAEA;
+    --bg:#FAFAFA;
+    --card:#FFFFFF;
+    --green:#1E9E5C;
+    --green-soft:#E8F5EE;
+    --amber:#C77700;
+    --amber-soft:#FFF4DC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* top band */
+  .topband{background:var(--ink); color:#fff; border-bottom:3px solid var(--red);}
+  .topband .inner{
+    max-width:1180px; margin:0 auto; padding:18px 24px;
+    display:flex; align-items:center; gap:16px;
+  }
+  .logo{font-weight:800; font-size:22px; letter-spacing:2px}
+  .logo .slash{color:var(--red-2); margin:0 8px; font-weight:400}
+  .logo .sub{font-weight:600; font-size:13px; letter-spacing:2px; color:#E5E5E5}
+  .pill{
+    margin-left:auto; font-size:11px; letter-spacing:1.5px; font-weight:700;
+    background:var(--red); color:#fff; padding:6px 12px; border-radius:20px;
+  }
+  /* layout */
+  .wrap{max-width:1180px; margin:0 auto; padding:32px 24px 80px; display:grid; gap:28px; grid-template-columns: 1fr 1.1fr;}
+  @media (max-width:900px){ .wrap{grid-template-columns:1fr} }
+  .panel{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:24px; box-shadow:0 1px 2px rgba(0,0,0,.02);
+  }
+  .panel h2{font-size:13px; letter-spacing:1.6px; color:var(--red); margin:0 0 4px; font-weight:700;}
+  .panel h1{font-size:22px; margin:0 0 16px; font-weight:700; color:var(--ink);}
+  .panel .helper{font-size:13px; color:var(--grey); margin:-10px 0 18px}
+  /* form */
+  label{display:block; font-size:12px; font-weight:600; color:var(--ink-2); letter-spacing:.3px; margin:14px 0 6px; text-transform:uppercase}
+  input,select,textarea{
+    width:100%; font:inherit; font-size:14px; color:var(--ink);
+    background:#fff; border:1px solid var(--line); border-radius:10px;
+    padding:11px 13px; outline:none; transition:border-color .15s, box-shadow .15s;
+  }
+  textarea{resize:vertical; min-height:130px; line-height:1.55}
+  input:focus,select:focus,textarea:focus{border-color:var(--red); box-shadow:0 0 0 3px rgba(203,32,45,.10)}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+  .helper-mini{font-size:11px; color:var(--grey-2); margin-top:5px}
+  .actions{display:flex; gap:10px; margin-top:22px; align-items:center; flex-wrap:wrap}
+  .btn{
+    font:inherit; font-weight:700; font-size:14px; cursor:pointer;
+    background:var(--red); color:#fff; border:none; padding:13px 22px;
+    border-radius:10px; letter-spacing:.3px;
+    transition:background .15s, transform .05s;
+  }
+  .btn:hover{background:#a8181f}
+  .btn:active{transform:scale(.99)}
+  .btn[disabled]{opacity:.55; cursor:not-allowed}
+  .btn.ghost{background:transparent; color:var(--ink-2); border:1px solid var(--line)}
+  .btn.ghost:hover{background:#F4F4F2}
+  .preset-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+  .preset{
+    font-size:11.5px; padding:5px 10px; border-radius:14px;
+    background:#F4F4F2; color:var(--ink-2); cursor:pointer;
+    border:1px solid var(--line); transition:all .12s;
+  }
+  .preset:hover{background:var(--red-soft); color:var(--red); border-color:var(--red)}
+  /* output */
+  .out{min-height:520px}
+  .empty{display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; text-align:center; color:var(--grey-2);}
+  .empty .dot{width:46px; height:46px; border-radius:50%; background:var(--red-soft); display:flex; align-items:center; justify-content:center; margin-bottom:14px}
+  .empty .dot::before{content:''; width:14px; height:14px; border-radius:50%; background:var(--red)}
+  .empty p{margin:6px 0; font-size:13.5px}
+  .empty .em{color:var(--ink-2); font-weight:600; font-size:15px}
+
+  .loading{display:flex; align-items:center; gap:12px; padding:20px; color:var(--grey)}
+  .spin{width:20px; height:20px; border:2.5px solid var(--line); border-top-color:var(--red); border-radius:50%; animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .verdict{
+    display:flex; align-items:center; gap:14px; padding:16px 18px;
+    border-radius:12px; margin-bottom:20px; border:1px solid;
+  }
+  .verdict.go{background:var(--green-soft); border-color:#BFE5CE; color:#0E5A33}
+  .verdict.review{background:var(--amber-soft); border-color:#F2D69A; color:#7A4A00}
+  .verdict.rework{background:var(--red-soft); border-color:#F2C2C7; color:#8A0F18}
+  .verdict-tag{font-size:10.5px; font-weight:800; letter-spacing:1.3px; padding:4px 10px; border-radius:14px; background:rgba(0,0,0,.08)}
+  .verdict-text{font-weight:600; font-size:14.5px}
+  .verdict-sub{font-size:13px; opacity:.85; margin-top:2px}
+
+  .listing{
+    border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:18px;
+  }
+  .listing-cover{
+    background:linear-gradient(135deg, var(--ink) 0%, #4A0A10 60%, var(--red) 130%);
+    color:#fff; padding:22px 20px; position:relative;
+  }
+  .listing-cover::after{
+    content:''; position:absolute; bottom:0; left:0; right:0; height:60px;
+    background:linear-gradient(to top, rgba(0,0,0,.35), transparent);
+  }
+  .listing-cat{font-size:10.5px; letter-spacing:1.5px; color:var(--red-2); font-weight:700}
+  .listing-title{font-size:21px; font-weight:800; margin:6px 0 8px; line-height:1.25; position:relative; z-index:1}
+  .listing-hook{font-size:13.5px; color:#F4F4F2; line-height:1.5; position:relative; z-index:1}
+  .listing-body{padding:18px 20px}
+  .listing-meta{display:flex; flex-wrap:wrap; gap:14px; font-size:12.5px; color:var(--grey); margin-bottom:14px}
+  .listing-meta b{color:var(--ink-2); font-weight:600}
+  .listing-desc{font-size:13.5px; color:var(--ink-2); line-height:1.6; margin-bottom:14px}
+  .tags{display:flex; flex-wrap:wrap; gap:6px}
+  .tag{font-size:11px; background:#F4F4F2; color:var(--ink-2); padding:4px 9px; border-radius:6px}
+
+  .section-h{font-size:11px; letter-spacing:1.4px; color:var(--grey); font-weight:700; margin:22px 0 10px; text-transform:uppercase}
+
+  .pricing{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
+  .tier{
+    border:1px solid var(--line); border-radius:10px; padding:12px;
+    text-align:center; background:#fff;
+  }
+  .tier.featured{border-color:var(--red); background:var(--red-soft)}
+  .tier-name{font-size:11px; letter-spacing:1px; color:var(--grey); font-weight:700; text-transform:uppercase}
+  .tier-price{font-size:20px; font-weight:800; color:var(--ink); margin:6px 0 4px}
+  .tier-perk{font-size:11.5px; color:var(--grey)}
+
+  .scorecard{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .score{
+    border:1px solid var(--line); border-radius:10px; padding:12px 14px;
+    background:#fff;
+  }
+  .score-label{font-size:11px; letter-spacing:1px; color:var(--grey); font-weight:700; text-transform:uppercase}
+  .score-val{font-size:18px; font-weight:800; margin-top:4px}
+  .score-bar{height:5px; background:var(--line); border-radius:3px; margin-top:8px; overflow:hidden}
+  .score-bar > div{height:100%; background:var(--red); border-radius:3px}
+
+  .reasons{margin-top:14px}
+  .reason{
+    display:flex; gap:10px; padding:9px 0; border-bottom:1px dashed var(--line);
+    font-size:13px; color:var(--ink-2);
+  }
+  .reason:last-child{border-bottom:0}
+  .reason-mark{width:18px; flex-shrink:0; font-weight:800; font-size:13px; line-height:1.5}
+  .mark-good{color:var(--green)}
+  .mark-warn{color:var(--amber)}
+  .mark-fail{color:var(--red)}
+
+  .footer-note{
+    font-size:11.5px; color:var(--grey-2); margin-top:24px; padding-top:18px;
+    border-top:1px solid var(--line); line-height:1.6;
+  }
+  .footer-note b{color:var(--grey)}
+
+  /* api key modal-ish */
+  .api-bar{
+    background:#FFFBEA; border:1px solid #F2D69A; border-radius:10px;
+    padding:12px 14px; font-size:12.5px; color:#7A4A00; margin-bottom:18px;
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .api-bar input{font-size:12.5px; padding:7px 10px; border-color:#E5C99A}
+  .api-bar .col{flex:1}
+  .api-bar b{display:block; margin-bottom:4px; color:#5A3700}
+  .api-bar small{display:block; margin-top:6px; color:#A07A30}
+</style>
+</head>
+<body>
+
+<header class="topband">
+  <div class="inner">
+    <div class="logo">DISTRICT<span class="slash">/</span><span class="sub">ORGANIZER AGENT</span></div>
+    <div class="pill">PROTOTYPE</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- LEFT: input -->
+  <section class="panel">
+    <h2>STEP 1 — TELL US ABOUT THE EVENT</h2>
+    <h1>Publish your event on District</h1>
+    <p class="helper">Paste your event details. The agent generates a District-style listing, suggests pricing, and runs a content + policy check.</p>
+
+    <div class="api-bar" id="apiBar">
+      <div class="col">
+        <b>Live mode (optional)</b>
+        Paste an Anthropic API key to use the live model. Leave empty to run the demo with the built-in offline engine — good for screen recordings.
+        <input type="password" id="apiKey" placeholder="sk-ant-... (optional, never stored)" autocomplete="off" />
+        <small>Key stays in your browser tab. Never sent to any server other than Anthropic.</small>
+      </div>
+    </div>
+
+    <label>What's the event?</label>
+    <textarea id="raw" placeholder="e.g. Standup comedy night with three local comics. Open mic in the second half. Bar will be open. Loosely themed around dating in your 30s."></textarea>
+    <div class="preset-row">
+      <span class="preset" data-preset="comedy">Standup night</span>
+      <span class="preset" data-preset="workshop">Salsa workshop</span>
+      <span class="preset" data-preset="boardgame">Board game café</span>
+      <span class="preset" data-preset="football">Pickup football</span>
+      <span class="preset" data-preset="risky">⚠️ Edge case</span>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label>City</label>
+        <select id="city">
+          <option>Bengaluru</option><option>Mumbai</option><option>Delhi NCR</option>
+          <option>Pune</option><option>Hyderabad</option><option>Chennai</option>
+          <option>Kolkata</option><option>Ahmedabad</option><option>Jaipur</option>
+        </select>
+      </div>
+      <div>
+        <label>Venue / area</label>
+        <input id="venue" placeholder="e.g. Indiranagar" />
+      </div>
+    </div>
+
+    <div class="row3">
+      <div>
+        <label>Date</label>
+        <input id="date" type="date" />
+      </div>
+      <div>
+        <label>Capacity</label>
+        <input id="capacity" type="number" placeholder="60" />
+      </div>
+      <div>
+        <label>Organizer</label>
+        <input id="organizer" placeholder="Name / brand" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" id="run">Run agent →</button>
+      <button class="btn ghost" id="clear">Clear</button>
+    </div>
+
+    <div class="footer-note">
+      <b>How it works:</b> The agent extracts category, audience, dress code, and policy signals → generates listing copy in District's tone → calculates pricing tiers from city, day-of-week, venue type, capacity → routes to <i>Auto-publish / Human review / Rework</i>. Built as one weekend's evidence by Rimpy Tulsyan, applying for the APM role.
+    </div>
+  </section>
+
+  <!-- RIGHT: output -->
+  <section class="panel out" id="out">
+    <h2>STEP 2 — AGENT OUTPUT</h2>
+    <h1>Generated listing & decision</h1>
+    <div class="empty" id="empty">
+      <div class="dot"></div>
+      <p class="em">Output will appear here</p>
+      <p>Fill the form on the left, or click a preset to try it.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ================================================================
+// THE OFFLINE ENGINE — runs the same logic the live model would,
+// using rules + templates. Lets the demo work without an API key.
+// ================================================================
+
+const PRESETS = {
+  comedy: {
+    raw: "Standup comedy night with three local comics — Aishwarya, Karan, and Sneha. 90 minutes. Open mic in the second half. Bar will be open. Loosely themed around dating in your 30s.",
+    venue: "Indiranagar", capacity: 60, organizer: "The Punchline Co."
+  },
+  workshop: {
+    raw: "Salsa social with a 45-min beginner workshop followed by 2 hours of social dancing. Live DJ. No partner required. All levels welcome. Light snacks included.",
+    venue: "Bandra West", capacity: 80, organizer: "Salsa Bombay"
+  },
+  boardgame: {
+    raw: "Board game night at our café. We have 60+ games from Catan to Codenames. Walk-in friendly. ₹200 cover gets you unlimited games for 4 hours plus one hot drink.",
+    venue: "Koramangala", capacity: 40, organizer: "Dice & Slice Café"
+  },
+  football: {
+    raw: "5-a-side pickup football, mixed skill levels. Astroturf. We split teams on arrival. Bibs and ball provided. 8 PM under floodlights, 90 minutes.",
+    venue: "HSR Layout", capacity: 30, organizer: "Sunday Sundays FC"
+  },
+  risky: {
+    raw: "Underground rave, location revealed 2 hours before. BYOB. Strictly 21+. Substances will be available. No phones inside.",
+    venue: "Undisclosed", capacity: 200, organizer: "Anonymous"
+  }
+};
+
+const DAY_OF_WEEK_MULT = {0:1.10,1:0.85,2:0.85,3:0.90,4:1.05,5:1.20,6:1.25}; // Sun..Sat
+const CITY_BASELINE = {
+  "Bengaluru":1.05,"Mumbai":1.20,"Delhi NCR":1.10,"Pune":0.95,
+  "Hyderabad":0.95,"Chennai":0.90,"Kolkata":0.85,"Ahmedabad":0.80,"Jaipur":0.80
+};
+
+function classify(raw){
+  const t = raw.toLowerCase();
+  if(/comedy|standup|stand-up|open mic|comic/.test(t)) return {cat:"COMEDY", base:400, dressCode:"Smart casual", tags:["Stand-up","Live","18+"], hookStyle:"comedy"};
+  if(/salsa|bachata|dance|zumba|workshop.*danc/.test(t)) return {cat:"DANCE & WORKSHOPS", base:600, dressCode:"Smart casual / dance-ready", tags:["Workshop","Social","All levels"], hookStyle:"workshop"};
+  if(/board game|board-game|catan|codename|tabletop|cafe.*game|game.*cafe/.test(t)) return {cat:"GAMES & SOCIAL", base:200, dressCode:"Casual", tags:["Walk-in","Indoor","Social"], hookStyle:"chill"};
+  if(/football|cricket|turf|pickleball|badminton|sport/.test(t)) return {cat:"PICKUP SPORTS", base:300, dressCode:"Sportswear", tags:["Outdoor","Mixed levels","Equipment provided"], hookStyle:"sport"};
+  if(/concert|gig|band|live music|dj.*set|performance/.test(t)) return {cat:"LIVE MUSIC", base:800, dressCode:"Smart casual", tags:["Live","Music","18+"], hookStyle:"music"};
+  if(/rave|underground|substanc|byob|undisclosed|secret location/.test(t)) return {cat:"UNCATEGORIZED", base:0, dressCode:"-", tags:[], hookStyle:"risky"};
+  return {cat:"GENERAL", base:500, dressCode:"Smart casual", tags:["Live","Indoor"], hookStyle:"general"};
+}
+
+function generateTitle(raw, cls, organizer){
+  const t = raw.toLowerCase();
+  const hooks = {
+    comedy: ["Punchlines & Pints","Three Comics, One Mic","Stand-up Saturdays","Open Mic After Hours","Funny People, Real Drinks"],
+    workshop: ["Salsa Social","Move Nights","First Step Salsa","Learn & Lose Yourself","Beginner-Friendly Salsa"],
+    chill: ["Roll, Reroll, Repeat","Game Night Fridays","60 Games, One Evening","Board Game Bash","Tabletop & Tea"],
+    sport: ["Pickup Football","Sunday 5-a-side","Floodlight Football","Turf Time","Show Up & Play"],
+    music: ["Live & Loud","Sound Check","City Sessions","After-Dark Sets","Gig Night"],
+    general: ["A Night Out","Going-Out Night","After Hours","Local Night","Together Tonight"],
+    risky: ["—"]
+  };
+  const arr = hooks[cls.hookStyle] || hooks.general;
+  // pick deterministically based on raw length so same input -> same title
+  return arr[raw.length % arr.length];
+}
+
+function generateHook(cls){
+  const hooks = {
+    comedy: "Three comics. Sixty seats. One bar that stays open until the laughs do.",
+    workshop: "First time on the floor or hundredth — show up, the rest figures itself out.",
+    chill: "Sixty games on the shelf, four hours on the clock, and zero pressure to leave.",
+    sport: "Show up, get a bib, get on a team. The rest is football.",
+    music: "Live sound, no filler. Doors open early, sets start sharp.",
+    general: "A small room, a good crowd, and a reason to leave the house.",
+    risky: "—"
+  };
+  return hooks[cls.hookStyle] || hooks.general;
+}
+
+function generateDescription(raw, cls, venue, city){
+  const lines = [];
+  if(cls.cat === "COMEDY") {
+    lines.push(`Stand-up comedy in the heart of ${venue}, ${city}. Three rotating headliners, one open-mic slot, and a bar that doesn't pretend to be quiet.`);
+    lines.push("Doors open 30 minutes before the show. Seating is first come, first served. Two-drink minimum on the floor — none on the laughs.");
+  } else if(cls.cat === "DANCE & WORKSHOPS") {
+    lines.push(`A 45-minute beginner workshop followed by two hours of social dancing in ${venue}. Live DJ, sprung floor, and absolutely no judgment.`);
+    lines.push("Come solo or with a partner — rotation is encouraged. Light snacks and water included.");
+  } else if(cls.cat === "GAMES & SOCIAL") {
+    lines.push(`Sixty-plus games on rotation, from gateway titles like Catan and Codenames to weirder picks for the regulars. ${venue} location, four-hour pass.`);
+    lines.push("Walk-ins welcome but reserving a table beats the wait.");
+  } else if(cls.cat === "PICKUP SPORTS") {
+    lines.push(`Mixed-skill 5-a-side at the ${venue} turf. Show up by 7:45 PM — we split teams at 8 sharp.`);
+    lines.push("Bibs, balls, and floodlights provided. Bring your own boots.");
+  } else if(cls.cat === "LIVE MUSIC") {
+    lines.push(`Live sets at ${venue}, ${city}. Doors at 7, first set at 8.`);
+  } else {
+    lines.push(`An evening at ${venue}, ${city}. Details inside.`);
+  }
+  return lines.join(" ");
+}
+
+function priceCalculate(cls, city, capacity, dateStr){
+  const base = cls.base || 500;
+  const cityMult = CITY_BASELINE[city] || 1.0;
+  const dow = dateStr ? new Date(dateStr).getDay() : 5; // default Friday
+  const dowMult = DAY_OF_WEEK_MULT[dow] || 1.0;
+  const capMult = capacity < 30 ? 1.10 : capacity > 100 ? 0.95 : 1.0;
+  const median = Math.round((base * cityMult * dowMult * capMult) / 10) * 10;
+  return {
+    early: Math.round(median * 0.75 / 10) * 10,
+    standard: median,
+    premium: Math.round(median * 1.45 / 10) * 10,
+    dow, cityMult, dowMult
+  };
+}
+
+function runChecks(raw, cls, capacity, venue){
+  const checks = [];
+  const t = raw.toLowerCase();
+  // policy checks
+  if(/substanc|drug|cocaine|mdma|weed/.test(t)){
+    checks.push({mark:"fail", text:"Mentions illegal substances — auto-block. District policy violation."});
+  }
+  if(/byob/.test(t) && !/licens/.test(t)){
+    checks.push({mark:"warn", text:"BYOB without venue license signal — flag for legal review."});
+  }
+  if(/undisclosed|secret location|location revealed/.test(t)){
+    checks.push({mark:"fail", text:"Undisclosed venue blocks ticket fulfilment + safety review. Listing cannot be auto-published."});
+  }
+  if(/strictly 21\+|18\+/.test(t)){
+    checks.push({mark:"good", text:"Age restriction stated clearly — adds to listing trust signal."});
+  }
+  if(cls.cat === "UNCATEGORIZED"){
+    checks.push({mark:"fail", text:"Could not categorize event into District's taxonomy. Likely high-risk content."});
+  }
+  // capacity vs venue checks
+  if(capacity > 150 && /cafe|café|lounge/.test((venue||"").toLowerCase())){
+    checks.push({mark:"warn", text:"Capacity vs venue type mismatch — 150+ in a café is unusual."});
+  }
+  if(capacity < 5){
+    checks.push({mark:"warn", text:"Capacity under 5 — likely a typo, manual review."});
+  }
+  // content quality checks
+  if(raw.length < 40){
+    checks.push({mark:"warn", text:"Description under 40 chars — listing will look thin. Suggest organizer expand."});
+  } else if(raw.length > 80) {
+    checks.push({mark:"good", text:"Description has enough signal to generate a strong listing."});
+  }
+  // tone check
+  if(/family.friendly|all.ages/.test(t) && cls.cat === "COMEDY"){
+    checks.push({mark:"warn", text:"Family-friendly + standup is a tonal mismatch — confirm content rating."});
+  }
+  if(checks.length === 0){
+    checks.push({mark:"good", text:"No policy or quality flags detected."});
+  }
+  return checks;
+}
+
+function decideRoute(checks){
+  if(checks.some(c => c.mark === "fail")) return {route:"REWORK", text:"Cannot auto-publish", sub:"Hard policy or quality blocker. Send back to organizer with the reasons below."};
+  if(checks.some(c => c.mark === "warn")) return {route:"REVIEW", text:"Route to human review", sub:"Soft flags present. Listing is publishable after a 2-minute ops check."};
+  return {route:"GO", text:"Auto-publish", sub:"Listing meets District quality + policy bar. Goes live in the organizer's chosen city + category."};
+}
+
+function scoreListing(raw, cls, checks){
+  let quality = 70;
+  if(raw.length > 80) quality += 8;
+  if(raw.length > 160) quality += 6;
+  if(/[.!?]/.test(raw)) quality += 4;
+  if(cls.cat !== "GENERAL" && cls.cat !== "UNCATEGORIZED") quality += 6;
+  if(checks.some(c=>c.mark==="warn")) quality -= 12;
+  if(checks.some(c=>c.mark==="fail")) quality -= 30;
+  let policy = 95;
+  if(checks.some(c=>c.mark==="warn")) policy -= 15;
+  if(checks.some(c=>c.mark==="fail")) policy -= 60;
+  return {
+    quality: Math.max(15, Math.min(99, quality)),
+    policy: Math.max(10, Math.min(99, policy))
+  };
+}
+
+// ================================================================
+// LIVE ENGINE — uses Anthropic API if key provided
+// ================================================================
+async function liveAnalyze(payload, apiKey){
+  const sys = `You are District by Zomato's organizer-listing agent. District is a going-out app for dining + entertainment ticketing in India. Your job: turn raw event input into a publishable listing, suggest 3 pricing tiers, run policy/quality checks, and route to one of GO / REVIEW / REWORK. Output strict JSON only — no prose, no markdown fences. Schema:
+{
+ "category":"COMEDY|DANCE & WORKSHOPS|GAMES & SOCIAL|PICKUP SPORTS|LIVE MUSIC|GENERAL|UNCATEGORIZED",
+ "title":"short punchy title, 4-6 words, District tone (warm, dry, urban)",
+ "hook":"one-line hook under 18 words",
+ "description":"2 short paragraphs, second-person, no exclamation marks",
+ "dressCode":"e.g. Smart casual",
+ "tags":["3-5 short tags"],
+ "pricing":{"early":number,"standard":number,"premium":number},
+ "checks":[{"mark":"good|warn|fail","text":"reason"}],
+ "scores":{"quality":0-99,"policy":0-99},
+ "route":"GO|REVIEW|REWORK",
+ "routeText":"short verdict label",
+ "routeSub":"one-line operator-facing reasoning"
+}`;
+  const user = `City: ${payload.city}
+Venue / area: ${payload.venue}
+Date: ${payload.date}
+Capacity: ${payload.capacity}
+Organizer: ${payload.organizer}
+
+Raw event description:
+"""${payload.raw}"""
+
+Generate the JSON now.`;
+
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({
+      model:"claude-sonnet-4-20250514",
+      max_tokens:1500,
+      system:sys,
+      messages:[{role:"user",content:user}]
+    })
+  });
+  if(!r.ok){
+    const txt = await r.text();
+    throw new Error("API error: " + r.status + " " + txt.slice(0,200));
+  }
+  const data = await r.json();
+  const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+  const cleaned = text.replace(/```json|```/g,"").trim();
+  return JSON.parse(cleaned);
+}
+
+// ================================================================
+// OFFLINE ANALYSIS WRAPPER
+// ================================================================
+function offlineAnalyze(payload){
+  const cls = classify(payload.raw);
+  const title = generateTitle(payload.raw, cls, payload.organizer);
+  const hook = generateHook(cls);
+  const description = generateDescription(payload.raw, cls, payload.venue || "the venue", payload.city);
+  const pricing = priceCalculate(cls, payload.city, payload.capacity || 50, payload.date);
+  const checks = runChecks(payload.raw, cls, payload.capacity || 50, payload.venue);
+  const route = decideRoute(checks);
+  const scores = scoreListing(payload.raw, cls, checks);
+  return {
+    category: cls.cat,
+    title, hook, description,
+    dressCode: cls.dressCode,
+    tags: cls.tags,
+    pricing: {early:pricing.early, standard:pricing.standard, premium:pricing.premium},
+    checks, scores,
+    route: route.route, routeText: route.text, routeSub: route.sub,
+    _meta: pricing
+  };
+}
+
+// ================================================================
+// RENDER
+// ================================================================
+function render(result){
+  const out = document.getElementById('out');
+  const tagsHTML = (result.tags||[]).map(t=>`<span class="tag">${t}</span>`).join("");
+  const checksHTML = (result.checks||[]).map(c=>{
+    const sym = c.mark === 'good' ? '✓' : c.mark === 'warn' ? '!' : '✕';
+    const cls = c.mark === 'good' ? 'mark-good' : c.mark === 'warn' ? 'mark-warn' : 'mark-fail';
+    return `<div class="reason"><span class="reason-mark ${cls}">${sym}</span><span>${c.text}</span></div>`;
+  }).join("");
+
+  const verdictClass = result.route === 'GO' ? 'go' : result.route === 'REVIEW' ? 'review' : 'rework';
+
+  out.innerHTML = `
+    <h2>STEP 2 — AGENT OUTPUT</h2>
+    <h1>Generated listing & decision</h1>
+
+    <div class="verdict ${verdictClass}">
+      <span class="verdict-tag">${result.route}</span>
+      <div>
+        <div class="verdict-text">${result.routeText}</div>
+        <div class="verdict-sub">${result.routeSub}</div>
+      </div>
+    </div>
+
+    <div class="section-h">Generated Listing</div>
+    <div class="listing">
+      <div class="listing-cover">
+        <div class="listing-cat">${result.category}</div>
+        <div class="listing-title">${result.title}</div>
+        <div class="listing-hook">${result.hook}</div>
+      </div>
+      <div class="listing-body">
+        <div class="listing-meta">
+          <span><b>Dress code:</b> ${result.dressCode}</span>
+          <span><b>Tags:</b></span>
+        </div>
+        <div class="tags" style="margin-bottom:12px">${tagsHTML}</div>
+        <div class="listing-desc">${result.description}</div>
+      </div>
+    </div>
+
+    <div class="section-h">Suggested Pricing</div>
+    <div class="pricing">
+      <div class="tier"><div class="tier-name">Early Bird</div><div class="tier-price">₹${result.pricing.early}</div><div class="tier-perk">First 30% capacity</div></div>
+      <div class="tier featured"><div class="tier-name">Standard</div><div class="tier-price">₹${result.pricing.standard}</div><div class="tier-perk">General entry</div></div>
+      <div class="tier"><div class="tier-name">Premium</div><div class="tier-price">₹${result.pricing.premium}</div><div class="tier-perk">Reserved seating</div></div>
+    </div>
+
+    <div class="section-h">Listing Scorecard</div>
+    <div class="scorecard">
+      <div class="score">
+        <div class="score-label">Listing quality</div>
+        <div class="score-val">${result.scores.quality}/100</div>
+        <div class="score-bar"><div style="width:${result.scores.quality}%"></div></div>
+      </div>
+      <div class="score">
+        <div class="score-label">Policy fit</div>
+        <div class="score-val">${result.scores.policy}/100</div>
+        <div class="score-bar"><div style="width:${result.scores.policy}%"></div></div>
+      </div>
+    </div>
+
+    <div class="section-h">Why this decision</div>
+    <div class="reasons">${checksHTML}</div>
+
+    <div class="footer-note">
+      Pricing inputs: city baseline × day-of-week × capacity tier. Policy checks run before listing copy generation. All decisions are explainable so ops can override in two clicks.
+    </div>
+  `;
+}
+
+function setLoading(){
+  document.getElementById('out').innerHTML = `
+    <h2>STEP 2 — AGENT OUTPUT</h2>
+    <h1>Generated listing & decision</h1>
+    <div class="loading"><div class="spin"></div><div>Agent thinking — extracting category, generating listing, scoring, routing…</div></div>
+  `;
+}
+
+// ================================================================
+// WIRING
+// ================================================================
+const $ = id => document.getElementById(id);
+
+document.querySelectorAll('.preset').forEach(el => {
+  el.addEventListener('click', () => {
+    const p = PRESETS[el.dataset.preset];
+    if(!p) return;
+    $('raw').value = p.raw;
+    $('venue').value = p.venue;
+    $('capacity').value = p.capacity;
+    $('organizer').value = p.organizer;
+    if(!$('date').value){
+      const d = new Date(); d.setDate(d.getDate()+10);
+      $('date').value = d.toISOString().slice(0,10);
+    }
+  });
+});
+
+$('clear').addEventListener('click', () => {
+  ['raw','venue','capacity','organizer','date'].forEach(id => $(id).value = '');
+  document.getElementById('out').innerHTML = `
+    <h2>STEP 2 — AGENT OUTPUT</h2>
+    <h1>Generated listing & decision</h1>
+    <div class="empty">
+      <div class="dot"></div>
+      <p class="em">Output will appear here</p>
+      <p>Fill the form on the left, or click a preset to try it.</p>
+    </div>
+  `;
+});
+
+$('run').addEventListener('click', async () => {
+  const payload = {
+    raw: $('raw').value.trim(),
+    city: $('city').value,
+    venue: $('venue').value.trim(),
+    date: $('date').value,
+    capacity: parseInt($('capacity').value || '50', 10),
+    organizer: $('organizer').value.trim() || "Anonymous Organizer"
+  };
+  if(!payload.raw){
+    alert("Add an event description first.");
+    return;
+  }
+  setLoading();
+  const apiKey = $('apiKey').value.trim();
+
+  try {
+    let result;
+    if(apiKey){
+      result = await liveAnalyze(payload, apiKey);
+      // small wait so the loader is visible
+      await new Promise(r => setTimeout(r, 400));
+    } else {
+      // simulate latency for the demo
+      await new Promise(r => setTimeout(r, 900));
+      result = offlineAnalyze(payload);
+    }
+    render(result);
+  } catch(e){
+    document.getElementById('out').innerHTML = `
+      <h2>STEP 2 — AGENT OUTPUT</h2>
+      <h1>Generated listing & decision</h1>
+      <div class="verdict rework">
+        <span class="verdict-tag">ERROR</span>
+        <div>
+          <div class="verdict-text">Live mode failed — ${e.message}</div>
+          <div class="verdict-sub">Falling back to offline engine. Try again or clear the API key field.</div>
+        </div>
+      </div>
+    `;
+    setTimeout(async ()=>{
+      const result = offlineAnalyze(payload);
+      render(result);
+    }, 600);
+  }
+});
+
+// pre-fill date 10 days out for convenience
+(function(){
+  const d = new Date(); d.setDate(d.getDate()+10);
+  $('date').value = d.toISOString().slice(0,10);
+})();
+</script>
+</body>
+</html>
